@@ -1,0 +1,8 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('tableTournamentContextBridge', {
+	reloadPage: () => ipcRenderer.send('reload-page'), // Перезагрузить страницу приложения
+	openDevConsole: () => ipcRenderer.send('open-dev-console'), // Открыть консоль разработчика
+	exitApp: () => ipcRenderer.send('exit-app'), // Закрыть приложение
+	importExcel: () => ipcRenderer.invoke('import-excel') // Импортируем данные из Excel файла
+});
