@@ -140,6 +140,23 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Журнал логов -->
+		<div class="bg-slate-100 border-2 border-slate-200 rounded-md mb-4">
+			<div class="border-slate-300 border-b-2 flex items-center justify-between px-8">
+				<p></p>
+				<p class="font-bold">Журнал логов:</p>
+				<p class="underline cursor-pointer hover:text-slate-500" @click="exportLogs">Экспорт в .txt</p>
+			</div>
+			<div class="max-h-[30rem] overflow-auto">
+				<p :class="`py-2 px-4 text-sm ${index % 2 === 0 ? 'bg-slate-50' : ''}`" v-for="(log, index) in logs">
+					<span class="italic">
+						{{ log?.date ?? 'N/A' }}
+					</span>
+					| {{ log?.text ?? 'N/A' }}
+				</p>
+			</div>
+		</div>
 		<ScrollTop />
 	</section>
 
@@ -209,11 +226,14 @@ const editObjectId = ref(-1);
 const editObjectName = ref('');
 const editOldObjectName = ref('');
 
+const logs = ref([]); // Журнал логов
+
 // Импортировать данные из Excel файла
 const importData = async () => {
 	const result = await window.tableTournamentContextBridge.importExcel();
 
 	clearData();
+	addLog(`Импортирован файл: ${result?.filePath ?? 'N/A'}`);
 
 	if (result && result.items && result.connections) {
 		items.value = result.items;
@@ -267,6 +287,8 @@ function clearData() {
 	VE.value = [];
 	bfsBenchmark.value = null;
 	dfsBenchmark.value = null;
+
+	addLog('Очистка текущего состояния (данных) приложения');
 }
 
 // Упаковка матрица по 2 схеме Тьюарсона
@@ -290,6 +312,8 @@ function packMatrix(matrix) {
 		cip.push(count); // здесь count — сколько всего до этой строки включительно
 	}
 
+	addLog('Упаковка матрицы по 2 схеме Тьюарсона');
+
 	return { CIP: cip, RI: ri, VE: ve };
 }
 
@@ -311,6 +335,8 @@ function bfsRaw(start = 0) {
 			}
 		}
 	}
+
+	addLog('Запуск BFS алгоритма (не упакованной матрицы)');
 
 	return count;
 }
@@ -337,6 +363,8 @@ function bfsPacked(start = 0) {
 		}
 	}
 
+	addLog('Запуск BFS алгоритма (упакованной матрицы)');
+
 	return count;
 }
 
@@ -358,6 +386,9 @@ function dfsRaw(start = 0) {
 	}
 
 	dfs(start);
+
+	addLog('Запуск DFS алгоритма (не упакованной матрицы)');
+
 	return count;
 }
 
@@ -382,11 +413,16 @@ function dfsPacked(start = 0) {
 	}
 
 	dfs(start);
+
+	addLog('Запуск DFS алгоритма (упакованной матрицы)');
+
 	return count;
 }
 
 // Запуск тестов
 function runGraphBenchmarks() {
+	addLog('Запуск benchmark');
+
 	const startNode = 0;
 
 	// BFS
@@ -430,6 +466,8 @@ function runGraphBenchmarks() {
 function clearBenchmarkData() {
 	bfsBenchmark.value = null;
 	dfsBenchmark.value = null;
+
+	addLog('Закрытие окна с benchmark данными');
 }
 
 // Добавляем новый объект в исходную таблицу №1
@@ -450,6 +488,8 @@ function addNewObject() {
 		id: items.value[items.value.length - 1].id + 1,
 		name: newObjectName.value
 	});
+
+	addLog(`Добавлен новый объект "${newObjectName.value}" в таблицу`);
 
 	isAddNewObjectDialogVisible.value = false;
 	toast('success', 'Успешно', 'Новый объект добавлен в таблицу!');
@@ -488,6 +528,8 @@ function deleteObject(obj) {
 	// Удаляем объект
 	items.value = items.value.filter(it => it.name !== obj.name);
 	toast('success', 'Успешно', 'Объект был удален из таблицы!');
+
+	addLog(`Объект "${obj.name}" удален из таблицы`);
 }
 
 // Открываем диалоговое окно по редактированию объекта из таблицы №1 и передаем данные об этом объекте
@@ -527,8 +569,28 @@ function editObject() {
 		} else return it;
 	});
 
+	addLog(`Объект в таблице "${editOldObjectName.value}" переименован в "${editObjectName.value}"`);
+
 	isEditObjectDialogVisible.value = false;
 	toast('success', 'Успешно', 'Объект изменил название в таблице!');
+}
+
+// Добавить запись в журнал логирования
+function addLog(text) {
+	logs.value.unshift({
+		date: new Date().toLocaleString(),
+		text
+	});
+}
+
+// Экспорт журнала логов в .txt файл
+async function exportLogs() {
+	const result = await window.tableTournamentContextBridge.exportLogs(JSON.parse(JSON.stringify(logs.value)));
+
+	if (result.success) toast('success', 'Успешно', 'Журнал логов выгружен в .txt файл!');
+	else toast('error', 'Ошибка', `При экспорте журнала логов возникла ошибка:\n${result.error}`);
+
+	addLog(`Экспорт журнала логов в .txt файл: ${result?.path ?? 'N/A'}`);
 }
 
 // В зависимости от состояния диалоговых окон изменяем их данные

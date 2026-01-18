@@ -248,7 +248,29 @@ const connectIpc = () => {
 			row++;
 		}
 
-		return { items, connections };
+		return { items, connections, filePath };
+	});
+
+	// Экспортируем журнал логов в .txt файл
+	ipcMain.handle('export-logs', async (_event, logs) => {
+		// Открываем диалог сохранения
+		const { filePath, canceled } = await dialog.showSaveDialog({
+			title: 'Сохранить как TXT',
+			defaultPath: `Журнал логов.txt`,
+			filters: [{ name: 'Text Files', extensions: ['txt'] }]
+		});
+
+		if (canceled || !filePath) return { success: false, error: 'Пользователь прервал операцию экспорта' };
+
+		try {
+			// Генерируем строку
+			const content = logs.map((item: any) => `${item.date} | ${item.text}`).join('\n');
+			fs.writeFileSync(filePath, content, 'utf-8');
+
+			return { success: true, path: filePath };
+		} catch (e) {
+			return { success: false, error: e };
+		}
 	});
 };
 
@@ -272,10 +294,4 @@ function toggleDevConsole(): void {
 // Закрыть приложение
 function exitApp(): void {
 	app.quit();
-}
-
-// В зависимости от среды (production/development) выбираем необходимый путь до файла
-function getCorrectFilePath(filename: string): string {
-	if (!MAIN_WINDOW_VITE_DEV_SERVER_URL) return path.join(app.getPath('userData'), filename);
-	else return path.join(__dirname, filename);
 }
