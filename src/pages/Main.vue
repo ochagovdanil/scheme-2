@@ -124,7 +124,7 @@
 			<!-- Упакованная матрица -->
 			<div v-if="adjMatrix.length" class="bg-primary text-white rounded-md px-4 py-2 h-max">
 				<p class="text-lg font-bold text-tertiary">Упаковка матрицы по 2 схеме Тьюарсона:</p>
-				<div class="max-h-[40rem] overflow-y-auto overflow-x-hidden">
+				<div class="max-h-[38.3rem] overflow-y-auto overflow-x-hidden">
 					<p>
 						<strong class="text-secondary text-lg">CIP:</strong>
 						{{ CIP.join(', ') }}
@@ -146,7 +146,10 @@
 			<div class="border-slate-300 border-b-2 flex items-center justify-between px-8">
 				<p></p>
 				<p class="font-bold">Журнал логов:</p>
-				<p class="underline cursor-pointer hover:text-slate-500" @click="exportLogs">Экспорт в .txt</p>
+				<p class="underline cursor-pointer hover:text-slate-500" @click="exportLogs">
+					Экспорт в .txt
+					<i class="pi pi-file-export ms-1"></i>
+				</p>
 			</div>
 			<div class="max-h-[30rem] overflow-auto">
 				<p :class="`py-2 px-4 text-sm ${index % 2 === 0 ? 'bg-slate-50' : ''}`" v-for="(log, index) in logs">
@@ -233,7 +236,7 @@ const importData = async () => {
 	const result = await window.tableTournamentContextBridge.importExcel();
 
 	clearData();
-	addLog(`Импортирован файл: ${result?.filePath ?? 'N/A'}`);
+	addLog(`Импорт файла: ${result?.filePath ?? 'N/A'}`);
 
 	if (result && result.items && result.connections) {
 		items.value = result.items;
