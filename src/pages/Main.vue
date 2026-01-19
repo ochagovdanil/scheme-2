@@ -16,6 +16,7 @@
 			</button>
 		</div>
 
+		<!-- Результаты benchmark -->
 		<div class="flex gap-12 justify-center mb-4">
 			<div v-if="bfsBenchmark" class="mt-4">
 				<p class="text-lg font-bold text-tertiary">BFS сравнение:</p>
@@ -38,7 +39,6 @@
 					Выигрыш: {{ bfsBenchmark.raw - bfsBenchmark.packed }} ms ({{ 100 - (bfsBenchmark.packed / bfsBenchmark.raw) * 100 }}%)
 				</p>
 			</div>
-
 			<div v-if="dfsBenchmark" class="mt-4">
 				<p class="text-lg font-bold text-tertiary">DFS сравнение:</p>
 				<p>
@@ -60,7 +60,6 @@
 					Выигрыш: {{ dfsBenchmark.raw - dfsBenchmark.packed }} ms ({{ 100 - (dfsBenchmark.packed / dfsBenchmark.raw) * 100 }}%)
 				</p>
 			</div>
-
 			<i
 				class="pi pi-times text-red-400 mt-4 cursor-pointer hover:text-red-500 p-2"
 				v-if="dfsBenchmark || bfsBenchmark"
@@ -98,25 +97,35 @@
 
 			<!-- Таблица связей -->
 			<div v-if="connections.length" class="bg-primary text-white py-2 px-4 rounded-md h-max">
-				<div class="grid grid-cols-[3rem_9rem_13rem_5rem_5rem_8rem] text-tertiary text-lg">
+				<div class="grid grid-cols-[3rem_9rem_13rem_5rem_5rem_8rem_2rem_1rem] items-center text-tertiary text-lg">
 					<p class="font-bold">№</p>
 					<p class="font-bold">Начало</p>
 					<p class="font-bold">Конец</p>
 					<p class="font-bold">Начало</p>
 					<p class="font-bold">Конец</p>
 					<p class="font-bold">Начало-Конец</p>
+					<p></p>
+					<i
+						class="pi pi-plus-circle justify-self-end text-green-400 cursor-pointer hover:text-green-600"
+						title="Добавить новый отрезок"
+						@click="isAddNewConnectionDialogVisible = true"></i>
 				</div>
 				<div class="max-h-[40rem] overflow-y-auto overflow-x-hidden">
 					<div
 						v-for="(link, index) in connections"
 						:key="index"
-						:class="`grid grid-cols-[3rem_9rem_13rem_5rem_5rem_8rem] rounded-md px-2 ${index % 2 === 0 ? 'bg-slate-700' : ''}`">
+						:class="`grid grid-cols-[3rem_9rem_13rem_5rem_5rem_8rem_2rem_1rem] rounded-md px-2 ${index % 2 === 0 ? 'bg-slate-700' : ''}`">
 						<p>{{ index + 1 }}</p>
 						<p>{{ link.startName }}</p>
 						<p>{{ link.endName }}</p>
 						<p>{{ link.startId }}</p>
 						<p>{{ link.endId }}</p>
 						<p>{{ link.startEnd }}</p>
+						<i
+							class="pi pi-pencil cursor-pointer text-yellow-500 hover:text-yellow-600"
+							title="Редактировать отрезок"
+							@click="() => openEditConnectionDialog(link)"></i>
+						<i class="pi pi-trash text-red-400 cursor-pointer hover:text-red-500" title="Удалить отрезок" @click="askToDeleteConnection(link)"></i>
 					</div>
 				</div>
 			</div>
@@ -177,6 +186,7 @@
 			</button>
 		</template>
 	</Dialog>
+
 	<!--  Диалоговое окно по редактированию объекта для таблицы №1 -->
 	<Dialog v-model:visible="isEditObjectDialogVisible" modal header="Редактировать объект" :style="{ width: 'max-content' }">
 		<label>Задайте новое название объекту:</label>
@@ -191,12 +201,54 @@
 			</button>
 		</template>
 	</Dialog>
+
+	<!--  Диалоговое окно по созданию нового отрезка для таблицы №2 -->
+	<Dialog v-model:visible="isAddNewConnectionDialogVisible" modal header="Добавить новый отрезок" :style="{ width: 'max-content' }">
+		<div>
+			<label class="me-2">Укажите начальную точку отрезка:</label>
+			<Select v-model="newStartObj" :options="items" optionLabel="name" placeholder="Выбрать точку" checkmark filter showClear class="w-64" />
+		</div>
+		<div class="mt-4">
+			<label class="me-2">Укажите конечную точку отрезка:</label>
+			<Select v-model="newEndObj" :options="items" optionLabel="name" placeholder="Выбрать точку" checkmark filter showClear class="w-64" />
+		</div>
+		<template #footer>
+			<button @click="isAddNewConnectionDialogVisible = false" class="outline-none rounded-md cursor-pointer bg-red-400 py-1 px-2 hover:bg-red-500">
+				Отмена
+			</button>
+			<button @click="addNewConnection" class="outline-none rounded-md cursor-pointer bg-green-400 py-1 px-2 hover:bg-green-500">
+				Сохранить
+				<i class="pi pi-save"></i>
+			</button>
+		</template>
+	</Dialog>
+
+	<!--  Диалоговое окно по редактированию отрезка для таблицы №2 -->
+	<Dialog v-model:visible="isEditConnectionDialogVisible" modal header="Редактировать отрезок" :style="{ width: 'max-content' }">
+		<div>
+			<label class="me-2">Укажите начальную точку отрезка:</label>
+			<Select v-model="editStartObj" :options="items" optionLabel="name" placeholder="Выбрать точку" checkmark filter showClear class="w-64" />
+		</div>
+		<div class="mt-4">
+			<label class="me-2">Укажите конечную точку отрезка:</label>
+			<Select v-model="editEndObj" :options="items" optionLabel="name" placeholder="Выбрать точку" checkmark filter showClear class="w-64" />
+		</div>
+		<template #footer>
+			<button @click="isEditConnectionDialogVisible = false" class="outline-none rounded-md cursor-pointer bg-red-400 py-1 px-2 hover:bg-red-500">
+				Отмена
+			</button>
+			<button @click="editConnection" class="outline-none rounded-md cursor-pointer bg-green-400 py-1 px-2 hover:bg-green-500">
+				Сохранить
+				<i class="pi pi-save"></i>
+			</button>
+		</template>
+	</Dialog>
 </template>
 
 <script setup>
 import useConfirmDialog from '@/shared/model/composables/useConfirmDialog';
 import useToastMessage from '@/shared/model/composables/useToastMessage';
-import { Dialog } from 'primevue';
+import { Dialog, Select } from 'primevue';
 import ScrollTop from 'primevue/scrolltop';
 import { ref, watch } from 'vue';
 
@@ -220,6 +272,8 @@ const dfsBenchmark = ref(null);
 // Видимость модальных окон
 const isAddNewObjectDialogVisible = ref(false);
 const isEditObjectDialogVisible = ref(false);
+const isAddNewConnectionDialogVisible = ref(false);
+const isEditConnectionDialogVisible = ref(false);
 
 // Данные для формы "Добавить новый объект"
 const newObjectName = ref('');
@@ -228,6 +282,16 @@ const newObjectName = ref('');
 const editObjectId = ref(-1);
 const editObjectName = ref('');
 const editOldObjectName = ref('');
+
+// Данные для формы "Добавить новый отрезок"
+const newStartObj = ref(null);
+const newEndObj = ref(null);
+
+// Данные для формы "Редактировать отрезок"
+const editStartObj = ref(null);
+const editEndObj = ref(null);
+const editOldStartObj = ref(null);
+const editOldEndObj = ref(null);
 
 const logs = ref([]); // Журнал логов
 
@@ -242,37 +306,7 @@ const importData = async () => {
 		items.value = result.items;
 		connections.value = result.connections;
 
-		// -------------------------------
-		// Построение матрицы смежности
-		// -------------------------------
-		const n = items.value.length;
-
-		// Создаем пустую матрицу n x n (заполненную 0)
-		const matrix = Array.from({ length: n }, () => Array.from({ length: n }, () => 0));
-
-		// Заголовки по порядку item.id (если они идут от 1 последовательно)
-		matrixHeaders.value = items.value.map(item => ({
-			id: item.id
-		}));
-
-		// Заполняем матрицу
-		for (const conn of connections.value) {
-			const fromIndex = items.value.findIndex(i => i.id === conn.startId);
-			const toIndex = items.value.findIndex(i => i.id === conn.endId);
-
-			if (fromIndex !== -1 && toIndex !== -1) {
-				// Двусторонняя связь (ненаправленный граф)
-				matrix[fromIndex][toIndex] = 1;
-				matrix[toIndex][fromIndex] = 1;
-			}
-		}
-
-		adjMatrix.value = matrix;
-
-		const packed = packMatrix(matrix);
-		CIP.value = packed.CIP;
-		RI.value = packed.RI;
-		VE.value = packed.VE;
+		packMatrix();
 	} else {
 		items.value = [];
 		connections.value = [];
@@ -294,8 +328,37 @@ function clearData() {
 	addLog('Очистка текущего состояния (данных) приложения');
 }
 
+// Построение матрицы смежности
+function buildAdjMatrix() {
+	const n = items.value.length;
+
+	// Создаем пустую матрицу n x n (заполненную 0)
+	const matrix = Array.from({ length: n }, () => Array.from({ length: n }, () => 0));
+
+	// Заголовки по порядку item.id (если они идут от 1 последовательно)
+	matrixHeaders.value = items.value.map(item => ({
+		id: item.id
+	}));
+
+	// Заполняем матрицу
+	for (const conn of connections.value) {
+		const fromIndex = items.value.findIndex(i => i.id === conn.startId);
+		const toIndex = items.value.findIndex(i => i.id === conn.endId);
+
+		if (fromIndex !== -1 && toIndex !== -1) {
+			// Двусторонняя связь (ненаправленный граф)
+			matrix[fromIndex][toIndex] = 1;
+			matrix[toIndex][fromIndex] = 1;
+		}
+	}
+
+	adjMatrix.value = matrix;
+	return matrix;
+}
+
 // Упаковка матрица по 2 схеме Тьюарсона
-function packMatrix(matrix) {
+function packMatrix() {
+	const matrix = buildAdjMatrix();
 	const cip = [0];
 	const ri = [];
 	const ve = [];
@@ -315,9 +378,11 @@ function packMatrix(matrix) {
 		cip.push(count); // здесь count — сколько всего до этой строки включительно
 	}
 
-	addLog('Упаковка матрицы по 2 схеме Тьюарсона');
+	CIP.value = cip;
+	RI.value = ri;
+	VE.value = ve;
 
-	return { CIP: cip, RI: ri, VE: ve };
+	addLog('Упаковка матрицы по 2 схеме Тьюарсона');
 }
 
 // BFS algo
@@ -538,6 +603,7 @@ function deleteObject(obj) {
 // Открываем диалоговое окно по редактированию объекта из таблицы №1 и передаем данные об этом объекте
 function openEditObjectDialog(obj) {
 	isEditObjectDialogVisible.value = true;
+
 	editObjectId.value = obj.id;
 	editObjectName.value = obj.name;
 	editOldObjectName.value = obj.name;
@@ -578,6 +644,151 @@ function editObject() {
 	toast('success', 'Успешно', 'Объект изменил название в таблице!');
 }
 
+// Проверяем существование связи между двумя объектами (точками) в таблице отрезков
+function connectionExists(startId, endId) {
+	return connections.value.some(conn => (conn.startId === startId && conn.endId === endId) || (conn.startId === endId && conn.endId === startId));
+}
+
+// Добавляем новый отрезок в таблицу №2
+function addNewConnection() {
+	// Валидация формы
+	if (!newStartObj.value) {
+		toast('warn', 'Внимание', 'Необходимо заполнить начальную точку отрезка!');
+		return;
+	}
+
+	if (!newEndObj.value) {
+		toast('warn', 'Внимание', 'Необходимо заполнить конечную точку отрезка!');
+		return;
+	}
+
+	if (newStartObj.value.id === newEndObj.value.id) {
+		toast('warn', 'Внимание', 'Начальная и конечная точки отрезка не должны совпадать между собой!');
+		return;
+	}
+
+	if (connectionExists(newStartObj.value.id, newEndObj.value.id)) {
+		toast('warn', 'Внимание', 'Такая связь уже существует! Задайте другую.');
+		return;
+	}
+
+	// Добавление элемента в массив
+	connections.value.push({
+		startId: newStartObj.value.id,
+		endId: newEndObj.value.id,
+		startName: newStartObj.value.name,
+		endName: newEndObj.value.name,
+		startEnd: `${newStartObj.value.id}-${newEndObj.value.id}`
+	});
+
+	addLog(`Добавлен новый отрезок "${newStartObj.value.name}-${newEndObj.value.name} || ${newStartObj.value.id}-${newEndObj.value.id}" в таблицу`);
+
+	packMatrix();
+
+	isAddNewConnectionDialogVisible.value = false;
+	toast('success', 'Успешно', 'Новый отрезок добавлен в таблицу!');
+}
+
+// Спрашиваем пользователя уверен ли он в том, что хочет удалить отрезок из таблицы №2
+function askToDeleteConnection(connection) {
+	confirm(
+		`Вы уверены что хотите удалить отрезок "${connection.startName}-${connection.endName} || ${connection.startEnd}"?`,
+		'Внимание',
+		'pi pi-exclamation-triangle',
+		{
+			label: 'Нет',
+			severity: 'danger',
+			outlined: true
+		},
+		{
+			label: 'Да',
+			severity: 'success'
+		},
+		() => {
+			deleteConnection(connection);
+		},
+		() => {}
+	);
+}
+
+// Удаляем отрезок из таблицы №2
+function deleteConnection(connection) {
+	connections.value = connections.value.filter(it => it.startEnd !== connection.startEnd);
+	toast('success', 'Успешно', 'Отрезок был удален из таблицы!');
+
+	addLog(`Отрезок "${connection.startName}-${connection.endName} || ${connection.startEnd}" удален из таблицы`);
+
+	packMatrix();
+}
+
+// Открываем диалоговое окно по редактированию отрезка из таблицы №2 и передаем данные об этом отрезке
+function openEditConnectionDialog(connection) {
+	isEditConnectionDialogVisible.value = true;
+
+	editStartObj.value = {
+		id: connection.startId,
+		name: connection.startName
+	};
+	editEndObj.value = {
+		id: connection.endId,
+		name: connection.endName
+	};
+	editOldStartObj.value = {
+		id: connection.startId,
+		name: connection.startName
+	};
+	editOldEndObj.value = {
+		id: connection.endId,
+		name: connection.endName
+	};
+}
+
+// Редактируем отрезок в исходной таблице №2
+function editConnection() {
+	// Валидация формы
+	if (!editStartObj.value) {
+		toast('warn', 'Внимание', 'Необходимо заполнить начальную точку отрезка!');
+		return;
+	}
+
+	if (!editEndObj.value) {
+		toast('warn', 'Внимание', 'Необходимо заполнить конечную точку отрезка!');
+		return;
+	}
+
+	if (editStartObj.value.id === editEndObj.value.id) {
+		toast('warn', 'Внимание', 'Начальная и конечная точки отрезка не должны совпадать между собой!');
+		return;
+	}
+
+	if (connectionExists(editStartObj.value.id, editEndObj.value.id)) {
+		toast('warn', 'Внимание', 'Такая связь уже существует!');
+		return;
+	}
+
+	// Изменение отрезка в таблице №2
+	connections.value = connections.value.map(it => {
+		if (it.startEnd === `${editOldStartObj.value.id}-${editOldEndObj.value.id}`) {
+			return {
+				startId: editStartObj.value.id,
+				endId: editEndObj.value.id,
+				startName: editStartObj.value.name,
+				endName: editEndObj.value.name,
+				startEnd: `${editStartObj.value.id}-${editEndObj.value.id}`
+			};
+		} else return it;
+	});
+
+	addLog(
+		`Отрезок в таблице "${editOldStartObj.value.name}-${editOldEndObj.value.name} || ${editOldStartObj.value.id}-${editOldEndObj.value.id}" переименован в "${editStartObj.value.name}-${editEndObj.value.name} || ${editStartObj.value.id}-${editEndObj.value.id}"`
+	);
+
+	packMatrix();
+
+	isEditConnectionDialogVisible.value = false;
+	toast('success', 'Успешно', 'Отрезок изменил название в таблице!');
+}
+
 // Добавить запись в журнал логирования
 function addLog(text) {
 	logs.value.unshift({
@@ -610,6 +821,24 @@ watch(isEditObjectDialogVisible, val => {
 		editObjectId.value = -1;
 		editObjectName.value = '';
 		editOldObjectName.value = '';
+	}
+});
+
+watch(isAddNewConnectionDialogVisible, val => {
+	if (!val) {
+		// Если закрытие, то чистим данные
+		newStartObj.value = '';
+		newEndObj.value = '';
+	}
+});
+
+watch(isEditConnectionDialogVisible, val => {
+	if (!val) {
+		// Если закрытие, то чистим данные
+		editStartObj.value = null;
+		editEndObj.value = null;
+		editOldStartObj.value = null;
+		editOldEndObj.value = null;
 	}
 });
 </script>
