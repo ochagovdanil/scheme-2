@@ -272,6 +272,57 @@ const connectIpc = () => {
 			return { success: false, error: e };
 		}
 	});
+
+	// Экспорт упакованной формы матрицы в .xlsx файл
+	ipcMain.handle('export-matrix', async (_event, ve, ri, cip) => {
+		// Открываем диалог сохранения
+		const { filePath, canceled } = await dialog.showSaveDialog({
+			title: 'Сохранить как XLSX',
+			defaultPath: `matrix.xlsx`,
+			filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
+		});
+
+		if (canceled || !filePath) return { success: false, error: 'Пользователь прервал операцию экспорта' };
+
+		try {
+			// Формируем данные
+			const ws_data = [];
+
+			// Первый блок — CIP
+			ws_data.push(['CIP']);
+			ws_data.push(cip);
+
+			// Отступ
+			ws_data.push([]);
+			ws_data.push([]);
+
+			// Второй блок — RI
+			ws_data.push(['RI']);
+			ws_data.push(ri);
+
+			ws_data.push([]);
+			ws_data.push([]);
+
+			// Третий блок — VE
+			ws_data.push(['VE']);
+			ws_data.push(ve);
+
+			// Создание книги
+			const ws = XLSX.utils.aoa_to_sheet(ws_data);
+			const wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, 'Packed Matrix');
+
+			// Генерация буфера
+			const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+
+			// Сохраняем файл вручную
+			fs.writeFileSync(filePath, wbout);
+
+			return { success: true, path: filePath };
+		} catch (e) {
+			return { success: false, error: e };
+		}
+	});
 };
 
 // Перезагружаем страницу приложения

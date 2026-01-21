@@ -2,6 +2,8 @@
   "name": "app",
   "version": "1.0.0",
   "main": ".vite/build/main.js",
+  "author": "Danil Ochagov",
+  "description": "2 схема",
   "scripts": {
     "dev": "electron-forge start",
     "package": "electron-forge package --arch=x64",
