@@ -10,6 +10,53 @@
 				<i class="pi pi-eraser"></i>
 				Очистить данные
 			</button>
+			<button v-if="adjMatrix.length" @click="runGraphBenchmarks" class="outline-none bg-teal-600 text-white rounded-lg px-4 py-2 hover:bg-teal-700">
+				<i class="pi pi-play"></i>
+				Сравнить время выполнения алгоритмов
+			</button>
+		</div>
+
+		<!-- Результаты benchmark -->
+		<div class="flex gap-12 justify-center mb-4">
+			<div v-if="bfsBenchmark" class="mt-4">
+				<p class="text-lg font-bold text-tertiary">BFS сравнение:</p>
+				<p class="mt-2">
+					<em>Затраченное время:</em>
+				</p>
+				<p>
+					⚙ До упаковки:
+					<strong>{{ bfsBenchmark.raw }} ms</strong>
+				</p>
+				<p>
+					📦 После упаковки:
+					<strong>{{ bfsBenchmark.packed }} ms</strong>
+				</p>
+				<p class="mt-2 text-green-600 font-bold">
+					Выигрыш: {{ bfsBenchmark.raw - bfsBenchmark.packed }} ms ({{ 100 - (bfsBenchmark.packed / bfsBenchmark.raw) * 100 }}%)
+				</p>
+			</div>
+			<div v-if="dfsBenchmark" class="mt-4">
+				<p class="text-lg font-bold text-tertiary">DFS сравнение:</p>
+				<p class="mt-2">
+					<em>Затраченное время:</em>
+				</p>
+				<p>
+					⚙ До упаковки:
+					<strong>{{ dfsBenchmark.raw }} ms</strong>
+				</p>
+				<p>
+					📦 После упаковки:
+					<strong>{{ dfsBenchmark.packed }} ms</strong>
+				</p>
+				<p class="mt-2 text-green-600 font-bold">
+					Выигрыш: {{ dfsBenchmark.raw - dfsBenchmark.packed }} ms ({{ 100 - (dfsBenchmark.packed / dfsBenchmark.raw) * 100 }}%)
+				</p>
+			</div>
+			<i
+				class="pi pi-times text-red-400 mt-4 cursor-pointer hover:text-red-500 p-2"
+				v-if="dfsBenchmark || bfsBenchmark"
+				@click="clearBenchmarkData"
+				title="Закрыть сравнение"></i>
 		</div>
 
 		<Divider />
@@ -147,6 +194,10 @@ const CIP = ref([]); // указатель индексов столбцов
 const RI = ref([]); // индекс строк
 const VE = ref([]); // значения ненулевых элементов
 
+// Сравнение алгоритмов DFS и BFS
+const bfsBenchmark = ref(null);
+const dfsBenchmark = ref(null);
+
 // Поля для поиска элемента
 const searchI = ref(null);
 const searchJ = ref(null);
@@ -164,7 +215,7 @@ const importData = async () => {
 	const result = await window.tableTournamentContextBridge.importExcel();
 
 	clearData();
-	addLog(`Импорт файла: ${result?.filePath ?? 'N/A'}`);
+	addLog(`Импорт файла: ${result?.filePath ?? 'N/A'}.`);
 
 	if (result && result.items && result.connections) {
 		items.value = result.items;
@@ -189,8 +240,10 @@ function clearData() {
 	searchJ.value = null;
 	foundElement.value = '';
 	ijValue.value = null;
+	bfsBenchmark.value = null;
+	dfsBenchmark.value = null;
 
-	addLog('Очистка текущего состояния (данных) приложения');
+	addLog('Очистка текущего состояния (данных) приложения.');
 }
 
 // Построение матрицы смежности
@@ -246,7 +299,160 @@ function packMatrix() {
 	RI.value = ri;
 	VE.value = ve;
 
-	addLog('Упаковка матрицы по 2 схеме Тьюарсона');
+	addLog('Упаковка матрицы по 2 схеме Тьюарсона.');
+}
+
+// BFS algo
+function bfsRaw(start = 0) {
+	const visited = new Array(adjMatrix.value.length).fill(false);
+	const queue = [start];
+	let count = 0;
+
+	while (queue.length) {
+		const node = queue.shift();
+		if (visited[node]) continue;
+		visited[node] = true;
+		count++;
+
+		for (let i = 0; i < adjMatrix.value.length; i++) {
+			if (adjMatrix.value[node][i] === 1 && !visited[i]) {
+				queue.push(i);
+			}
+		}
+	}
+
+	addLog('Запуск BFS алгоритма (не упакованной матрицы).');
+
+	return count;
+}
+
+function bfsPacked(start = 0) {
+	const visited = new Array(CIP.value.length - 1).fill(false);
+	const queue = [start];
+	let count = 0;
+
+	while (queue.length) {
+		const node = queue.shift();
+		if (visited[node]) continue;
+		visited[node] = true;
+		count++;
+
+		const startIdx = CIP.value[node];
+		const endIdx = CIP.value[node + 1];
+
+		for (let i = startIdx; i < endIdx; i++) {
+			const next = RI.value[i];
+			if (!visited[next]) {
+				queue.push(next);
+			}
+		}
+	}
+
+	addLog('Запуск BFS алгоритма (упакованной матрицы).');
+
+	return count;
+}
+
+// DFS algo
+function dfsRaw(start = 0) {
+	const visited = new Array(adjMatrix.value.length).fill(false);
+	let count = 0;
+
+	function dfs(node) {
+		if (visited[node]) return;
+		visited[node] = true;
+		count++;
+
+		for (let i = 0; i < adjMatrix.value.length; i++) {
+			if (adjMatrix.value[node][i] === 1 && !visited[i]) {
+				dfs(i);
+			}
+		}
+	}
+
+	dfs(start);
+
+	addLog('Запуск DFS алгоритма (не упакованной матрицы).');
+
+	return count;
+}
+
+function dfsPacked(start = 0) {
+	const visited = new Array(CIP.value.length - 1).fill(false);
+	let count = 0;
+
+	function dfs(node) {
+		if (visited[node]) return;
+		visited[node] = true;
+		count++;
+
+		const startIdx = CIP.value[node];
+		const endIdx = CIP.value[node + 1];
+
+		for (let i = startIdx; i < endIdx; i++) {
+			const next = RI.value[i];
+			if (!visited[next]) {
+				dfs(next);
+			}
+		}
+	}
+
+	dfs(start);
+
+	addLog('Запуск DFS алгоритма (упакованной матрицы).');
+
+	return count;
+}
+
+// Запуск тестов
+function runGraphBenchmarks() {
+	addLog('Запуск benchmark.');
+
+	const startNode = 0;
+
+	// BFS
+	let t1 = performance.now();
+	const bfsRawCount = bfsRaw(startNode);
+	let t2 = performance.now();
+	let bfsRawTime = t2 - t1;
+
+	t1 = performance.now();
+	const bfsPackedCount = bfsPacked(startNode);
+	t2 = performance.now();
+	let bfsPackedTime = t2 - t1;
+
+	bfsBenchmark.value = {
+		raw: bfsRawTime.toFixed(3),
+		packed: bfsPackedTime.toFixed(3),
+		rawCount: bfsRawCount,
+		packedCount: bfsPackedCount
+	};
+
+	// DFS
+	t1 = performance.now();
+	const dfsRawCount = dfsRaw(startNode);
+	t2 = performance.now();
+	let dfsRawTime = t2 - t1;
+
+	t1 = performance.now();
+	const dfsPackedCount = dfsPacked(startNode);
+	t2 = performance.now();
+	let dfsPackedTime = t2 - t1;
+
+	dfsBenchmark.value = {
+		raw: dfsRawTime.toFixed(3),
+		packed: dfsPackedTime.toFixed(3),
+		rawCount: dfsRawCount,
+		packedCount: dfsPackedCount
+	};
+}
+
+// Закрываем окно с показом разницы во времени для выполнения алгоритмов
+function clearBenchmarkData() {
+	bfsBenchmark.value = null;
+	dfsBenchmark.value = null;
+
+	addLog('Закрытие окна с benchmark данными.');
 }
 
 // Добавить запись в журнал логирования
@@ -264,7 +470,7 @@ async function exportLogs() {
 	if (result.success) toast('success', 'Успешно', 'Журнал логов выгружен в .txt файл!');
 	else toast('error', 'Ошибка', `При экспорте журнала логов возникла ошибка:\n${result.error}`);
 
-	addLog(`Экспорт журнала логов в .txt файл: ${result?.path ?? 'N/A'}`);
+	addLog(`Экспорт журнала логов в .txt файл: ${result?.path ?? 'N/A'}.`);
 }
 
 // Экспорт упакованной матрицы в Excel
@@ -278,7 +484,7 @@ async function exportExcel() {
 	if (result.success) toast('success', 'Успешно', 'Упакованная форма матрицы выгружена в .xlsx файл!');
 	else toast('error', 'Ошибка', `При экспорте упакованной формы матрицы возникла ошибка:\n${result.error}`);
 
-	addLog(`Экспорт упакованной формы матрицы .xlsx файл: ${result?.path ?? 'N/A'}`);
+	addLog(`Экспорт упакованной формы матрицы .xlsx файл: ${result?.path ?? 'N/A'}.`);
 }
 
 // Поиск элемента по i и j
@@ -307,7 +513,7 @@ function findElement() {
 		if (ri[k] === i) {
 			// Нашли нужный элемент
 			foundElement.value = `a[${i}, ${j}] = ${ve[k]}`;
-			addLog(`Поиск элемента a[${i}, ${j}] = ${ve[k]}`);
+			addLog(`Поиск элемента a[${i}, ${j}] = ${ve[k]}.`);
 
 			toast('success', 'Успешно!', 'Элемент был найден.');
 			return;
