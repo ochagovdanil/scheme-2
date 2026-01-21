@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('tableTournamentContextBridge', {
 	openDevConsole: () => ipcRenderer.send('open-dev-console'), // Открыть консоль разработчика
 	exitApp: () => ipcRenderer.send('exit-app'), // Закрыть приложение
 	importExcel: () => ipcRenderer.invoke('import-excel'), // Импортируем данные из Excel файла
-	exportLogs: (logs: any) => ipcRenderer.invoke('export-logs', logs) // Экспорт журнала логов в .txt файл
+	exportLogs: (logs: any) => ipcRenderer.invoke('export-logs', logs), // Экспорт журнала логов в .txt файл
+	exportMatrix: (ve: any, ri: any, cip: any) => ipcRenderer.invoke('export-matrix', ve, ri, cip) // Экспорт упакованной формы матрицы в .xlsx файл
 });
